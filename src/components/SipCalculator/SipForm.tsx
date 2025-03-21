@@ -1,8 +1,7 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { 
   Card, 
@@ -30,14 +29,18 @@ const SipForm = ({ onCalculate, isCalculating = false }: SipFormProps) => {
   const [years, setYears] = useState<number>(10);
   const [expectedReturnRate, setExpectedReturnRate] = useState<number>(12);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onCalculate({
-      monthlyInvestment,
-      years,
-      expectedReturnRate
-    });
-  };
+  // Trigger calculation whenever any input value changes
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      onCalculate({
+        monthlyInvestment,
+        years,
+        expectedReturnRate
+      });
+    }, 300); // Add a small debounce to prevent too many calculations
+
+    return () => clearTimeout(debounceTimer);
+  }, [monthlyInvestment, years, expectedReturnRate, onCalculate]);
 
   const handleMonthlyInvestmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value) || 0;
@@ -75,7 +78,7 @@ const SipForm = ({ onCalculate, isCalculating = false }: SipFormProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-6">
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -206,15 +209,7 @@ const SipForm = ({ onCalculate, isCalculating = false }: SipFormProps) => {
               </div>
             </div>
           </div>
-
-          <Button 
-            type="submit" 
-            className="w-full font-medium" 
-            disabled={isCalculating}
-          >
-            {isCalculating ? "Calculating..." : "Calculate Returns"}
-          </Button>
-        </form>
+        </div>
       </CardContent>
     </Card>
   );

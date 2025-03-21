@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet";
 import Header from "@/components/Layout/Header";
 import Footer from "@/components/Layout/Footer";
@@ -18,6 +18,18 @@ const Index = () => {
   const [isCalculating, setIsCalculating] = useState(false);
   const { toast } = useToast();
 
+  // Initial calculation on component mount
+  useEffect(() => {
+    // Set default values for first calculation
+    const defaultParams: SipParams = {
+      monthlyInvestment: 5000,
+      years: 10,
+      expectedReturnRate: 12
+    };
+    
+    handleCalculate(defaultParams);
+  }, []);
+
   const handleCalculate = (params: SipParams) => {
     setIsCalculating(true);
     
@@ -26,7 +38,7 @@ const Index = () => {
       const newResult = calculateSIP(params);
       setResult(newResult);
       setIsCalculating(false);
-    }, 500);
+    }, 300);
   };
 
   const handleShare = () => {
