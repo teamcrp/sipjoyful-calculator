@@ -7,11 +7,13 @@ import SipForm from "@/components/SipCalculator/SipForm";
 import ResultsDisplay from "@/components/SipCalculator/ResultsDisplay";
 import ChartVisualizations from "@/components/SipCalculator/ChartVisualizations";
 import CalculationTable from "@/components/SipCalculator/CalculationTable";
-import { calculateSIP, SipParams, SipResult } from "@/components/SipCalculator/utils";
+import { calculateSIP, SipParams, SipResult, formatCurrency } from "@/components/SipCalculator/utils";
 import { Button } from "@/components/ui/button";
 import { Download, Share2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const Index = () => {
   const [result, setResult] = useState<SipResult | null>(null);
@@ -58,13 +60,101 @@ const Index = () => {
   };
 
   const handleDownload = () => {
+    if (!result) return;
+
     toast({
-      title: "Report generated",
-      description: "Your investment report is downloading.",
+      title: "Generating report",
+      description: "Your investment report is being prepared.",
     });
     
-    // In a real application, this would generate a PDF report
-    // For now, just show a toast notification
+    try {
+      // Create a new jsPDF instance
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      
+      // Add title
+      doc.setFontSize(20);
+      doc.setTextColor(40, 40, 40);
+      doc.text("SIP Investment Report", pageWidth / 2, 20, { align: "center" });
+      
+      // Add date
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, pageWidth / 2, 27, { align: "center" });
+      
+      // Add summary section
+      doc.setFontSize(14);
+      doc.setTextColor(40, 40, 40);
+      doc.text("Investment Summary", 14, 40);
+      
+      // Add summary table
+      autoTable(doc, {
+        startY: 45,
+        head: [["Parameter", "Value"]],
+        body: [
+          ["Monthly Investment", formatCurrency(result.yearlyResults[0].yearlyInvestment / 12)],
+          ["Time Period", `${result.yearlyResults.length} years`],
+          ["Expected Return Rate", `${result.yearlyResults[0].yearlyInterest.toFixed(2)}%`],
+          ["Total Investment", formatCurrency(result.totalInvestment)],
+          ["Total Interest Earned", formatCurrency(result.totalInterest)],
+          ["Final Value", formatCurrency(result.finalValue)]
+        ],
+        theme: "grid",
+        headStyles: { fillColor: [66, 66, 66], textColor: [255, 255, 255] },
+        styles: { fontSize: 10 }
+      });
+      
+      // Add yearly breakdown section
+      doc.setFontSize(14);
+      doc.setTextColor(40, 40, 40);
+      doc.text("Yearly Breakdown", 14, doc.lastAutoTable.finalY + 15);
+      
+      // Add yearly breakdown table
+      const yearlyTableData = result.yearlyResults.map(yr => [
+        yr.year,
+        formatCurrency(yr.yearlyInvestment),
+        formatCurrency(yr.totalInvestment),
+        formatCurrency(yr.yearlyInterest),
+        formatCurrency(yr.totalInterest),
+        formatCurrency(yr.totalValue)
+      ]);
+      
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 20,
+        head: [["Year", "Yearly Investment", "Total Investment", "Yearly Interest", "Total Interest", "Total Value"]],
+        body: yearlyTableData,
+        theme: "grid",
+        headStyles: { fillColor: [66, 66, 66], textColor: [255, 255, 255] },
+        styles: { fontSize: 8 },
+        columnStyles: {
+          0: { cellWidth: 15 }
+        }
+      });
+      
+      // Add footer
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text("Powered by teamcrp.in", pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: "center" });
+      }
+      
+      // Save the PDF
+      doc.save("SIP_Investment_Report.pdf");
+      
+      toast({
+        title: "Report downloaded",
+        description: "Your investment report has been downloaded successfully.",
+      });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast({
+        title: "Error generating report",
+        description: "There was an error creating your report. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
